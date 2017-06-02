@@ -3,9 +3,18 @@ library(dplyr)
 
 set.seed(1337)
 
-cover <- function(clause, data) Reduce(function(d, l) d %>% filter_(l), clause, data)
+cover <- function(clause, data) filter_(data, .dots=clause)
 
 findLiteral <- function(clause, pos, neg) {
+  current <- length(clause) + 1
+  values <- c(pos[[current]], neg[[current]]) %>% unique
+  coveredNeg <- values %>% lapply(function(x) sum(neg[[current]] == x))
+  best <- which.min(coveredNeg)
+  literal <- paste(colnames(neg)[current], '==', best)
+  print(literal)
+}
+
+pruneClause <- function(clause, pos, neg) {
   # TODO
 }
 
@@ -69,5 +78,15 @@ data <- read.csv(url("https://archive.ics.uci.edu/ml/machine-learning-databases/
 
 data.split <- split(data, data$V1)
 
-irep(data.split$e, data.split$p, 1/4, 0.1)
+irep(select(data.split$e, -V1), select(data.split$p, -V1), 1/4, 0.1)
+
+small.data <- data.frame(c(1, 1, 0, 1, 0, 0), c(1, 1, 1, 0, 0, 0), c(0, 1, 0, 1, 0, 0), c(0, 0, 1, 0, 0, 1))
+colnames(small.data) <- c('c', 'a1', 'a2', 'a3')
+small.data.split <- split(small.data, small.data$c)
+
+
+findLiteral(list(), small.data.split$`1`[-1], small.data.split$`0`[-1])
+irep(small.data.split$`1`[-1], small.data.split$`0`[-1], 1/4, 0.1)
+
+
 
