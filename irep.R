@@ -1,14 +1,73 @@
 library(caTools)
+library(dplyr)
+
 set.seed(1337)
+
+cover <- function(clause, data) Reduce(function(d, l) d %>% filter_(l), clause, data)
+
+findLiteral <- function(clause, pos, neg) {
+  # TODO
+}
+
+clauseAccuracy <- function(clause, pos, neg) {
+  TP <- clause %>% cover(pos) %>% nrow
+  FN <- clause %>% cover(neg) %>% nrow
+  TN <- nrow(neg) - FN
+  
+  (TN + TN) / (nrow(pos) + nrow(neg))
+}
+
+failAccuracy <- function(pos, neg) {
+  P <- nrow(pos)
+  N <- nrow(neg)
+  
+  N / (P + N)
+}
 
 irep <- function(pos, neg, splitRatio, accuracy) {
   clauses <- c()
-  if (nrow(pos) > 0) {
-    sample <- sample.split(pos$anyColumn, SplitRatio = splitRatio)
+  failAccuracyValue <- failAccuracy(pos, neg)
+  print(splitRatio)
+  
+  while (nrow(pos) > 0) {
+    pos.sample <- sample.split(pos, SplitRatio = splitRatio)
+    posGrow <- subset(pos, pos.sample == TRUE)
+    posPrune <- subset(pos, pos.sample == FALSE)
+    
+    neg.sample <- sample.split(neg, SplitRatio = splitRatio)
+    negGrow <- subset(neg, neg.sample == TRUE)
+    negPrune <- subset(neg, neg.sample == FALSE)
+    
+    clause <- list()
+    while (nrow(negGrow)) {
+      clause <- c(clause, findLiteral(clause, posGrow, negGrow))
+      posGrow <- cover(clause, posGrow)
+      negGrow <- cover(clause, negGrow)
+    }
+    
+    clause <- pruneClause(clause, posPrune, negPrune)
+    
+    if (clauseAccuracy(clause, pos, neg) <= failAccuracyValue) {
+      return(clauses)
+    } else {
+      pos <- pos %>% setdiff(cover(clause, pos))
+      neg <- neg %>% setdiff(cover(clause, neg))
+      clauses <- c(clauses, clause)
+    }
   }
+  return(clauses)
 }
 
-data <- read.csv(url("https://archive.ics.uci.edu/ml/machine-learning-databases/mushroom/agaricus-lepiota.data"))
-data.split <- split(data, data$p)
+
+
+data <- read.csv(url("https://archive.ics.uci.edu/ml/machine-learning-databases/mushroom/agaricus-lepiota.data"), header=FALSE)
+#colnames(data) <- c('class', 'cap-shape', 'cap-surface', 'cap-color', 'bruises?', 'odor',
+#                    'gill-attachment', 'gill-spacing', 'gill-size', 'gill-color', 'stalk-shape',
+#                    'stalk-root', 'stalk-surface-above-ring', 'stalk-surface-below-ring', 'stalk-color-above-ring',
+#                    'stalk-color-below-ring', 'veil-type', 'veil-color', 'ring-number', 'ring-type', 'spore-print-color',
+#                    'population', 'habitat')
+
+data.split <- split(data, data$V1)
 
 irep(data.split$e, data.split$p, 1/4, 0.1)
+
