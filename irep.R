@@ -11,11 +11,23 @@ findLiteral <- function(clause, pos, neg) {
   coveredNeg <- values %>% lapply(function(x) sum(neg[[current]] == x))
   best <- which.min(coveredNeg)
   literal <- paste(colnames(neg)[current], '==', best)
-  print(literal)
 }
 
 pruneClause <- function(clause, pos, neg) {
-  # TODO
+  best <- clauseAccuracy(clause, pos, neg)
+  accuracies <- c()
+  repeat {
+    for (i in 1:length(clause)) {
+      accuracies[i] <- clauseAccuracy(clause[-i], pos, neg)
+    }
+    newMax <- max(accuracies)
+    if (best < newMax) {
+      best <- newMax
+      clause <- clause[-which.max(accuracies)]
+    } else {
+      return(clause)
+    }
+  }
 }
 
 clauseAccuracy <- function(clause, pos, neg) {
@@ -23,7 +35,7 @@ clauseAccuracy <- function(clause, pos, neg) {
   FN <- clause %>% cover(neg) %>% nrow
   TN <- nrow(neg) - FN
   
-  (TN + TN) / (nrow(pos) + nrow(neg))
+  (TP + TN) / (nrow(pos) + nrow(neg))
 }
 
 failAccuracy <- function(pos, neg) {
@@ -36,7 +48,6 @@ failAccuracy <- function(pos, neg) {
 irep <- function(pos, neg, splitRatio, accuracy) {
   clauses <- c()
   failAccuracyValue <- failAccuracy(pos, neg)
-  print(splitRatio)
   
   while (nrow(pos) > 0) {
     pos.sample <- sample.split(pos, SplitRatio = splitRatio)
@@ -86,6 +97,7 @@ small.data.split <- split(small.data, small.data$c)
 
 
 findLiteral(list(), small.data.split$`1`[-1], small.data.split$`0`[-1])
+pruneClause(list('a1 == 1', 'a2 == 1', 'a3 == 0'), small.data.split$`1`[-1], small.data.split$`0`[-1])
 irep(small.data.split$`1`[-1], small.data.split$`0`[-1], 1/4, 0.1)
 
 
