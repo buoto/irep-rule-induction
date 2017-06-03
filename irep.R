@@ -3,27 +3,58 @@ library(dplyr)
 
 set.seed(1337)
 
-cover <- function(clause, data) filter_(data, .dots=clause)
+cover <- function(clause, data) {
+  query <- c()
+  for (i in 1:length(clause)) {
+    if(!is.na(clause[i])) {
+      query <- c(query, paste(colnames(data)[i], '==', clause[i]))
+    }
+  }
+  #print(filter_(data, .dots=query))
+  filter_(data, .dots=query)
+}
 
-findLiteral <- function(clause, pos, neg) {
-  current <- length(clause) + 1
-  values <- c(pos[[current]], neg[[current]]) %>% unique
-  coveredNeg <- values %>% lapply(function(x) sum(neg[[current]] == x))
-  best <- which.min(coveredNeg)
-  literal <- paste(colnames(neg)[current], '==', best)
+addLiteral <- function(clause, pos, neg) {
+  bestAccuracy <- -1
+  newClause <- clause
+  #print(neg)
+  for (i in 1:length(clause)) {
+    if (is.na(clause[i])) {
+      values <- c(pos[[i]], neg[[i]]) %>% unique %>% unlist
+      values <- values[!is.na(values)]
+      
+      for (v in values) {
+        TP <- sum(pos[[i]] == v, na.rm = TRUE)
+        FN <- sum(neg[[i]] == v, na.rm = TRUE)
+        TN <- nrow(neg) - FN
+        
+        accuracy <- (TP + TN) / (nrow(pos) + nrow(neg))
+        print(accuracy)
+        if (accuracy >= bestAccuracy) {
+          #print(c(v, i, accuracy))
+          bestAccuracy <- accuracy
+          newClause <- clause
+          newClause[i] <- v
+        }
+      }
+    }
+  }
+  newClause
 }
 
 pruneClause <- function(clause, pos, neg) {
   best <- clauseAccuracy(clause, pos, neg)
-  accuracies <- c()
+  accuracies <- rep(0, length(clause))
   repeat {
     for (i in 1:length(clause)) {
       accuracies[i] <- clauseAccuracy(clause[-i], pos, neg)
     }
+    #print(accuracies)
     newMax <- max(accuracies)
-    if (best < newMax) {
+    #print(c(newMax, best, length(clause)))
+    if (sum(!is.na(clause)) > 1 && best <= newMax) {
       best <- newMax
-      clause <- clause[-which.max(accuracies)]
+      clause[-which.max(accuracies)] <- NA
     } else {
       return(clause)
     }
@@ -50,29 +81,35 @@ irep <- function(pos, neg, splitRatio, accuracy) {
   failAccuracyValue <- failAccuracy(pos, neg)
   
   while (nrow(pos) > 0) {
-    pos.sample <- sample.split(pos, SplitRatio = splitRatio)
+    pos.sample <- sample.split(pos[[1]], SplitRatio = splitRatio)
     posGrow <- subset(pos, pos.sample == TRUE)
     posPrune <- subset(pos, pos.sample == FALSE)
     
-    neg.sample <- sample.split(neg, SplitRatio = splitRatio)
+    neg.sample <- sample.split(neg[[1]], SplitRatio = splitRatio)
     negGrow <- subset(neg, neg.sample == TRUE)
     negPrune <- subset(neg, neg.sample == FALSE)
     
-    clause <- list()
-    while (nrow(negGrow)) {
-      clause <- c(clause, findLiteral(clause, posGrow, negGrow))
+    clause <- rep(NA, ncol(neg))
+    #print('negGrow')
+    print(posGrow)
+    print(negGrow)
+    while (nrow(negGrow) > 0) {
+      clause <- addLiteral(clause, posGrow, negGrow)
       posGrow <- cover(clause, posGrow)
       negGrow <- cover(clause, negGrow)
     }
     
+    #print(c('preprune', clause, negGrow))
     clause <- pruneClause(clause, posPrune, negPrune)
+    #print(c('pruned', clause))
     
     if (clauseAccuracy(clause, pos, neg) <= failAccuracyValue) {
       return(clauses)
     } else {
       pos <- pos %>% setdiff(cover(clause, pos))
       neg <- neg %>% setdiff(cover(clause, neg))
-      clauses <- c(clauses, clause)
+      clauses <- c(clauses, list(clause))
+      print(clause)
     }
   }
   return(clauses)
@@ -91,14 +128,13 @@ data.split <- split(data, data$V1)
 
 irep(select(data.split$e, -V1), select(data.split$p, -V1), 1/4, 0.1)
 
-small.data <- data.frame(c(1, 1, 0, 1, 0, 0), c(1, 1, 1, 0, 0, 0), c(0, 1, 0, 1, 0, 0), c(0, 0, 1, 0, 0, 1))
-colnames(small.data) <- c('c', 'a1', 'a2', 'a3')
-small.data.split <- split(small.data, small.data$c)
+#small.data <- data.frame(c(1, 1, 0, 1, 0, 0), c(1, 1, 1, 0, 0, 0), c(0, 1, 0, 1, 0, 0), c(0, 0, 1, 0, 0, 1))
+#colnames(small.data) <- c('c', 'a1', 'a2', 'a3')
+#small.data.split <- split(small.data, small.data$c)
 
 
-findLiteral(list(), small.data.split$`1`[-1], small.data.split$`0`[-1])
-pruneClause(list('a1 == 1', 'a2 == 1', 'a3 == 0'), small.data.split$`1`[-1], small.data.split$`0`[-1])
-irep(small.data.split$`1`[-1], small.data.split$`0`[-1], 1/4, 0.1)
+#pruneClause(c(1,1,0), small.data.split$`1`[-1], small.data.split$`0`[-1])
+#irep(small.data.split$`1`[-1], small.data.split$`0`[-1], 1/4, 0.1)
 
 
 
