@@ -1,26 +1,25 @@
 library(caTools)
 library(dplyr)
+library(lazyeval)
 
 set.seed(1337)
 
 cover <- function(clause, data) {
-  query <- c()
+  filterConds <- c()
   for (i in 1:length(clause)) {
     if(!is.na(clause[i])) {
-      query <- c(query, paste(colnames(data)[i], '==', clause[i]))
+      filterConds <- c(filterConds, interp(~data[[i]] == x, i = i, x = clause[i]))
     }
   }
-  #print(filter_(data, .dots=query))
-  filter_(data, .dots=query)
+  filter_(data, .dots=filterConds)
 }
 
 addLiteral <- function(clause, pos, neg) {
   bestAccuracy <- -1
   newClause <- clause
-  #print(neg)
   for (i in 1:length(clause)) {
     if (is.na(clause[i])) {
-      values <- c(pos[[i]], neg[[i]]) %>% unique %>% unlist
+      values <- list(pos[[i]], neg[[i]]) %>% unlist %>% unique
       values <- values[!is.na(values)]
       
       for (v in values) {
@@ -29,9 +28,8 @@ addLiteral <- function(clause, pos, neg) {
         TN <- nrow(neg) - FN
         
         accuracy <- (TP + TN) / (nrow(pos) + nrow(neg))
-        print(accuracy)
-        if (accuracy >= bestAccuracy) {
-          #print(c(v, i, accuracy))
+        if (accuracy > bestAccuracy) {
+          print(c(v, i, accuracy))
           bestAccuracy <- accuracy
           newClause <- clause
           newClause[i] <- v
@@ -97,6 +95,7 @@ irep <- function(pos, neg, splitRatio, accuracy) {
       clause <- addLiteral(clause, posGrow, negGrow)
       posGrow <- cover(clause, posGrow)
       negGrow <- cover(clause, negGrow)
+      print(clause)
     }
     
     #print(c('preprune', clause, negGrow))
