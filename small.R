@@ -5,4 +5,4 @@ colnames(small.data) <- c('c', 'a1', 'a2', 'a3')
 small.data.split <- split(small.data, small.data$c)
 
 
-irep(small.data.split$`1`[-1], small.data.split$`0`[-1], 1/4, 0.1)
+irep(small.data.split$`1`[-1], small.data.split$`0`[-1], 1/4)

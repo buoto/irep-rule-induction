@@ -42,18 +42,24 @@ addLiteral <- function(clause, pos, neg) {
 
 pruneClause <- function(clause, pos, neg) {
   best <- clauseAccuracy(clause, pos, neg)
-  accuracies <- rep(0, length(clause))
+  print(c("PRUNING best is", best))
   repeat {
+    accuracies <- rep(0, length(clause))
     for (i in 1:length(clause)) {
-      accuracies[i] <- clauseAccuracy(clause[-i], pos, neg)
+      if (!is.na(clause[i])) {
+        newClause <- clause
+        newClause[i] <- NA
+        accuracies[i] <- clauseAccuracy(newClause, pos, neg)
+      }
     }
-    #print(accuracies)
+    print(accuracies)
     newMax <- max(accuracies)
     #print(c(newMax, best, length(clause)))
-    if (sum(!is.na(clause)) > 1 && best <= newMax) {
+    if (sum(!is.na(clause)) > 1 && best < newMax) {
       best <- newMax
-      clause[-which.max(accuracies)] <- NA
+      clause[which.max(accuracies)] <- NA
     } else {
+      print(c("now best is", best))
       return(clause)
     }
   }
@@ -89,8 +95,8 @@ irep <- function(pos, neg, splitRatio, accuracy) {
     
     clause <- rep(NA, ncol(neg))
     #print('negGrow')
-    print(posGrow)
-    print(negGrow)
+    #print(posGrow)
+    #print(negGrow)
     while (nrow(negGrow) > 0) {
       clause <- addLiteral(clause, posGrow, negGrow)
       posGrow <- cover(clause, posGrow)
@@ -100,7 +106,7 @@ irep <- function(pos, neg, splitRatio, accuracy) {
     
     #print(c('preprune', clause, negGrow))
     clause <- pruneClause(clause, posPrune, negPrune)
-    #print(c('pruned', clause))
+    print(c('pruned', clause))
     
     if (clauseAccuracy(clause, pos, neg) <= failAccuracyValue) {
       return(clauses)
@@ -108,7 +114,6 @@ irep <- function(pos, neg, splitRatio, accuracy) {
       pos <- pos %>% setdiff(cover(clause, pos))
       neg <- neg %>% setdiff(cover(clause, neg))
       clauses <- c(clauses, list(clause))
-      print(clause)
     }
   }
   return(clauses)

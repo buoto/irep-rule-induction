@@ -8,5 +8,7 @@ data <- read.csv(url("https://archive.ics.uci.edu/ml/machine-learning-databases/
 #                    'population', 'habitat')
 
 data.split <- split(data, data$V1)
+pos <- select(data.split$e, -V1)
+neg <- select(data.split$p, -V1)
 
-irep(select(data.split$e, -V1), select(data.split$p, -V1), 1/4, 0.1)
+irep(select(data.split$e, -V1), select(data.split$p, -V1), 1/4)
