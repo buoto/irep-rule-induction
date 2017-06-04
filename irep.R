@@ -1,6 +1,7 @@
 library(caTools)
 library(dplyr)
 library(lazyeval)
+library(pROC)
 
 set.seed(1337)
 
@@ -128,3 +129,8 @@ matchRules <- function(rules, example) rules %>% sapply(function(rule) matchRule
 
 matchRule <- function(rule, example) all(rule == example, na.rm = TRUE)
 
+roc <- function (labels, scores){
+  labels <- labels[order(scores, decreasing=TRUE)]
+  data.frame(TPR=cumsum(labels)/sum(labels), FPR=cumsum(!labels)/sum(!labels), labels)
+  
+}
