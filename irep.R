@@ -118,3 +118,13 @@ irep <- function(pos, neg, splitRatio, accuracy) {
   }
   return(clauses)
 }
+
+predict <- function(rules, posLabel, negLabel, example) {
+  matching <- matchRules(rules, example)
+  if (matching) posLabel else negLabel
+}
+
+matchRules <- function(rules, example) rules %>% sapply(function(rule) matchRule(rule, example)) %>% any
+
+matchRule <- function(rule, example) all(rule == example, na.rm = TRUE)
+
