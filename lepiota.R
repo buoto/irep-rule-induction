@@ -1,4 +1,5 @@
 source('irep.R')
+library(pROC)
 
 data <- read.csv(url("https://archive.ics.uci.edu/ml/machine-learning-databases/mushroom/agaricus-lepiota.data"), header=FALSE)
 #colnames(data) <- c('class', 'cap-shape', 'cap-surface', 'cap-color', 'bruises?', 'odor',
@@ -16,3 +17,7 @@ classifier <- irep(pos, neg, 1/2)
 predict(classifier, 'e', 'p', c(1:4, 'n', 'f', 1:9, 'p', 'w', 1:5)) # positive example
 predict(classifier, 'e', 'p', c(1:4, 'n', 'f', 1:9, 'p', 'x', 1:5)) # negative example
 
+
+labels <- match(data[[1]], c('p','e'))-1
+scores <- apply(data[-1],1,function(example) predict(classifier, 1, 0, example))
+plot(roc(labels, scores))
