@@ -3,6 +3,7 @@
 #' @author Magdalena Rusiecka
 source('irep.R')
 library(pROC)
+library(caret)
 
 set.seed(1337)
 
@@ -13,14 +14,19 @@ data <- read.csv(url("https://archive.ics.uci.edu/ml/machine-learning-databases/
 #                    'stalk-color-below-ring', 'veil-type', 'veil-color', 'ring-number', 'ring-type', 'spore-print-color',
 #                    'population', 'habitat')
 
-data.split <- split(data, data$V1)
-pos <- select(data.split$e, -V1)
-neg <- select(data.split$p, -V1)
+msk <- sample.split(data[,1], SplitRatio = 1/2)
+train <- subset(data, msk == TRUE)
+test <- subset(data, msk == FALSE)
 
-classifier <- irep(pos, neg, 1/2)
+train.split <- split(train, train$V1)
+pos <- select(train.split$e, -V1)
+neg <- select(train.split$p, -V1)
 
-predict(classifier, list(c(1:4, 'n', 'f', 1:9, 'p', 'w', 1:5))) # positive example
-matchRules(classifier, c(1:4, 'n', 'f', 1:9, 'p', 'x', 1:5)) # negative example
+model <- irep(pos, neg, 1/2)
+
+predicted <- predict(model, test[-1])
+predictedLabels <- factor(predicted, labels = c('e', 'p'))
+confusionMatrix(predictedLabels, test$V1, positive = 'e')
 
 
 labels <- match(data[[1]], c('p','e'))-1

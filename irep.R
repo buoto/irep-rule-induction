@@ -13,9 +13,8 @@ library(lazyeval)
 #' @param neg Dataframe containing negative examples.
 #' @param splitRatio A number
 #' @return List of rules represented as vectors of attributes.
-irep <- function(pos, neg, splitRatio) {
+irep <- function(pos, neg, splitRatio, failAccuracyValue = failAccuracy(pos, neg)) {
   rules <- c()
-  failAccuracyValue <- failAccuracy(pos, neg)
   
   while (nrow(pos) > 0) {
     pos.sample <- sample.split(pos[[1]], SplitRatio = splitRatio)
@@ -43,6 +42,7 @@ irep <- function(pos, neg, splitRatio) {
       rules <- c(rules, list(rule))
     }
   }
+  
   class(rules) <- 'irep' 
   return(rules)
 }
