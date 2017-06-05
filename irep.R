@@ -5,21 +5,26 @@ library(pROC)
 
 set.seed(1337)
 
-cover <- function(clause, data) {
+#' Filter dataframe with provided rule.
+#' 
+#' @param rule Vector of attributes.
+#' @param df Dataframe to filter.
+#' @return Filtered dataframe.
+cover <- function(rule, df) {
   filterConds <- c()
-  for (i in 1:length(clause)) {
-    if(!is.na(clause[i])) {
-      filterConds <- c(filterConds, interp(~data[[i]] == x, i = i, x = clause[i]))
+  for (i in 1:length(rule)) {
+    if(!is.na(rule[i])) {
+      filterConds <- c(filterConds, interp(~df[[i]] == x, i = i, x = rule[i]))
     }
   }
-  filter_(data, .dots=filterConds)
+  filter_(df, .dots=filterConds)
 }
 
-addLiteral <- function(clause, pos, neg) {
+addLiteral <- function(rule, pos, neg) {
   bestAccuracy <- -1
-  newClause <- clause
-  for (i in 1:length(clause)) {
-    if (is.na(clause[i])) {
+  newRule <- rule
+  for (i in 1:length(rule)) {
+    if (is.na(rule[i])) {
       values <- list(pos[[i]], neg[[i]]) %>% unlist %>% unique
       values <- values[!is.na(values)]
       
@@ -32,43 +37,43 @@ addLiteral <- function(clause, pos, neg) {
         if (accuracy > bestAccuracy) {
           print(c(v, i, accuracy))
           bestAccuracy <- accuracy
-          newClause <- clause
-          newClause[i] <- v
+          newRule <- rule
+          newRule[i] <- v
         }
       }
     }
   }
-  newClause
+  newRule
 }
 
-pruneClause <- function(clause, pos, neg) {
-  best <- clauseAccuracy(clause, pos, neg)
+pruneRule <- function(rule, pos, neg) {
+  best <- ruleAccuracy(rule, pos, neg)
   print(c("PRUNING best is", best))
   repeat {
-    accuracies <- rep(0, length(clause))
-    for (i in 1:length(clause)) {
-      if (!is.na(clause[i])) {
-        newClause <- clause
-        newClause[i] <- NA
-        accuracies[i] <- clauseAccuracy(newClause, pos, neg)
+    accuracies <- rep(0, length(rule))
+    for (i in 1:length(rule)) {
+      if (!is.na(rule[i])) {
+        newRule <- rule
+        newRule[i] <- NA
+        accuracies[i] <- ruleAccuracy(newRule, pos, neg)
       }
     }
     print(accuracies)
     newMax <- max(accuracies)
-    #print(c(newMax, best, length(clause)))
-    if (sum(!is.na(clause)) > 1 && best < newMax) {
+    #print(c(newMax, best, length(rule)))
+    if (sum(!is.na(rule)) > 1 && best < newMax) {
       best <- newMax
-      clause[which.max(accuracies)] <- NA
+      rule[which.max(accuracies)] <- NA
     } else {
       print(c("now best is", best))
-      return(clause)
+      return(rule)
     }
   }
 }
 
-clauseAccuracy <- function(clause, pos, neg) {
-  TP <- clause %>% cover(pos) %>% nrow
-  FN <- clause %>% cover(neg) %>% nrow
+ruleAccuracy <- function(rule, pos, neg) {
+  TP <- rule %>% cover(pos) %>% nrow
+  FN <- rule %>% cover(neg) %>% nrow
   TN <- nrow(neg) - FN
   
   (TP + TN) / (nrow(pos) + nrow(neg))
@@ -82,7 +87,7 @@ failAccuracy <- function(pos, neg) {
 }
 
 irep <- function(pos, neg, splitRatio, accuracy) {
-  clauses <- c()
+  rules <- c()
   failAccuracyValue <- failAccuracy(pos, neg)
   
   while (nrow(pos) > 0) {
@@ -94,30 +99,30 @@ irep <- function(pos, neg, splitRatio, accuracy) {
     negGrow <- subset(neg, neg.sample == TRUE)
     negPrune <- subset(neg, neg.sample == FALSE)
     
-    clause <- rep(NA, ncol(neg))
+    rule <- rep(NA, ncol(neg))
     #print('negGrow')
     #print(posGrow)
     #print(negGrow)
     while (nrow(negGrow) > 0) {
-      clause <- addLiteral(clause, posGrow, negGrow)
-      posGrow <- cover(clause, posGrow)
-      negGrow <- cover(clause, negGrow)
-      print(clause)
+      rule <- addLiteral(rule, posGrow, negGrow)
+      posGrow <- cover(rule, posGrow)
+      negGrow <- cover(rule, negGrow)
+      print(rule)
     }
     
-    #print(c('preprune', clause, negGrow))
-    clause <- pruneClause(clause, posPrune, negPrune)
-    print(c('pruned', clause))
+    #print(c('preprune', rule, negGrow))
+    rule <- pruneRule(rule, posPrune, negPrune)
+    print(c('pruned', rule))
     
-    if (clauseAccuracy(clause, pos, neg) <= failAccuracyValue) {
-      return(clauses)
+    if (ruleAccuracy(rule, pos, neg) <= failAccuracyValue) {
+      return(rules)
     } else {
-      pos <- setdiff(pos, cover(clause, pos))
-      neg <- setdiff(neg, cover(clause, neg))
-      clauses <- c(clauses, list(clause))
+      pos <- setdiff(pos, cover(rule, pos))
+      neg <- setdiff(neg, cover(rule, neg))
+      rules <- c(rules, list(rule))
     }
   }
-  return(clauses)
+  return(rules)
 }
 
 predict <- function(rules, posLabel, negLabel, example) {
