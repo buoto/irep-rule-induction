@@ -112,8 +112,8 @@ irep <- function(pos, neg, splitRatio, accuracy) {
     if (clauseAccuracy(clause, pos, neg) <= failAccuracyValue) {
       return(clauses)
     } else {
-      pos <- pos %>% setdiff(cover(clause, pos))
-      neg <- neg %>% setdiff(cover(clause, neg))
+      pos <- setdiff(pos, cover(clause, pos))
+      neg <- setdiff(neg, cover(clause, neg))
       clauses <- c(clauses, list(clause))
     }
   }
