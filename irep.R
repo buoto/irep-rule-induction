@@ -7,7 +7,7 @@ set.seed(1337)
 
 #' Filter dataframe with provided rule.
 #' 
-#' @param rule Vector of attributes.
+#' @param rule Rule represented as vector of attributes.
 #' @param df Dataframe to filter.
 #' @return Filtered dataframe.
 cover <- function(rule, df) {
@@ -20,6 +20,12 @@ cover <- function(rule, df) {
   filter_(df, .dots=filterConds)
 }
 
+#' Grow rule with one literal.
+#' 
+#' @param rule Rule represented as vector of attributes.
+#' @param pos Dataframe containing positive examples.
+#' @param neg Dataframe containing negative examples.
+#' @return Rule with new literal added.
 addLiteral <- function(rule, pos, neg) {
   bestAccuracy <- -1
   newRule <- rule
@@ -46,6 +52,12 @@ addLiteral <- function(rule, pos, neg) {
   newRule
 }
 
+#' Prune maximizing rule accuracy.
+#' 
+#' @param rule Rule represented as vector of attributes.
+#' @param pos Dataframe containing positive examples.
+#' @param neg Dataframe containing negative examples.
+#' @return Pruned rule.
 pruneRule <- function(rule, pos, neg) {
   best <- ruleAccuracy(rule, pos, neg)
   print(c("PRUNING best is", best))
@@ -71,6 +83,12 @@ pruneRule <- function(rule, pos, neg) {
   }
 }
 
+#' Get accuracy of rule on provided dataset.
+#' 
+#' @param rule Rule represented as vector of attributes.
+#' @param pos Dataframe containing positive examples.
+#' @param neg Dataframe containing negative examples.
+#' @return A number - rule accuracy.
 ruleAccuracy <- function(rule, pos, neg) {
   TP <- rule %>% cover(pos) %>% nrow
   FN <- rule %>% cover(neg) %>% nrow
@@ -79,6 +97,11 @@ ruleAccuracy <- function(rule, pos, neg) {
   (TP + TN) / (nrow(pos) + nrow(neg))
 }
 
+#' Get fail accuracy of provided dataset.
+#' 
+#' @param pos Dataframe containing positive examples.
+#' @param neg Dataframe containing negative examples.
+#' @return A number - fail accuracy.
 failAccuracy <- function(pos, neg) {
   P <- nrow(pos)
   N <- nrow(neg)
@@ -86,7 +109,14 @@ failAccuracy <- function(pos, neg) {
   N / (P + N)
 }
 
-irep <- function(pos, neg, splitRatio, accuracy) {
+#' Extract rules from provided dataset using IREP algorithm
+#' based on Furnkranz and Widmer paper.
+#' 
+#' @param pos Dataframe containing positive examples.
+#' @param neg Dataframe containing negative examples.
+#' @param splitRatio A number
+#' @return List of rules represented as vectors of attributes.
+irep <- function(pos, neg, splitRatio) {
   rules <- c()
   failAccuracyValue <- failAccuracy(pos, neg)
   
@@ -122,16 +152,29 @@ irep <- function(pos, neg, splitRatio, accuracy) {
       rules <- c(rules, list(rule))
     }
   }
+  class(rules) <- 'irep' 
   return(rules)
 }
 
-predict <- function(rules, posLabel, negLabel, example) {
-  matching <- matchRules(rules, example)
-  if (matching) posLabel else negLabel
-}
+#' Returns a vector of predicted responses from a fitted irep object.
+#' 
+#' @param object Fitted model object of class "irep".
+#' @param newdata Dataframe of new data to predict.
+#' @return Vector of predicted responses (TRUE/FALSE)
+predict.irep <- function(object, newdata) apply(newdata, 1, function (example) matchRules(object, example))
 
+#' Match example against many rules.
+#' 
+#' @param rules Fitted rules from "irep" model.
+#' @param example Single example as vector of attributes.
+#' @return Rules prediction (TRUE/FALSE).
 matchRules <- function(rules, example) rules %>% sapply(function(rule) matchRule(rule, example)) %>% any
 
+#' Match example against one rule.
+#' 
+#' @param rules Single rule represented as vector of attributes.
+#' @param example Single example as vector of attributes.
+#' @return Rules prediction (TRUE/FALSE).
 matchRule <- function(rule, example) all(rule == example, na.rm = TRUE)
 
 

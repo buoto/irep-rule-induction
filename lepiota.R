@@ -14,8 +14,8 @@ neg <- select(data.split$p, -V1)
 
 classifier <- irep(pos, neg, 1/2)
 
-predict(classifier, 'e', 'p', c(1:4, 'n', 'f', 1:9, 'p', 'w', 1:5)) # positive example
-predict(classifier, 'e', 'p', c(1:4, 'n', 'f', 1:9, 'p', 'x', 1:5)) # negative example
+predict(classifier, list(c(1:4, 'n', 'f', 1:9, 'p', 'w', 1:5))) # positive example
+matchRules(classifier, c(1:4, 'n', 'f', 1:9, 'p', 'x', 1:5)) # negative example
 
 
 labels <- match(data[[1]], c('p','e'))-1
