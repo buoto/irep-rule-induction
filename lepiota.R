@@ -4,6 +4,7 @@
 source('irep.R')
 library(pROC)
 library(caret)
+library(e1071)
 
 set.seed(1337)
 
@@ -25,9 +26,14 @@ neg <- select(train.split$p, -V1)
 model <- irep(pos, neg, 1/2)
 
 predicted <- predict(model, test[-1])
-predictedLabels <- factor(predicted, labels = c('e', 'p'))
+predictedLabels <- factor(!predicted, labels = c('e', 'p'))
 confusionMatrix(predictedLabels, test$V1, positive = 'e')
 
+refModel <- naiveBayes(train[-1], train$V1)
+
+refPredicted <- predict(refModel, test[-1])
+refPredictedLabels <- factor(predicted, labels = c('e', 'p'))
+refConfusionMatrix(predictedLabels, test$V1, positive = 'e')
 
 labels <- match(data[[1]], c('p','e'))-1
 scores <- apply(data[-1],1,function(example) predict(classifier, 1, 0, example))
