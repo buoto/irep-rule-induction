@@ -27,19 +27,13 @@ irep <- function(pos, neg, splitRatio) {
     negPrune <- subset(neg, neg.sample == FALSE)
     
     rule <- rep(NA, ncol(neg))
-    #print('negGrow')
-    #print(posGrow)
-    #print(negGrow)
     while (nrow(negGrow) > 0) {
       rule <- addLiteral(rule, posGrow, negGrow)
       posGrow <- cover(rule, posGrow)
       negGrow <- cover(rule, negGrow)
-      print(rule)
     }
     
-    #print(c('preprune', rule, negGrow))
     rule <- pruneRule(rule, posPrune, negPrune)
-    print(c('pruned', rule))
     
     if (ruleAccuracy(rule, pos, neg) <= failAccuracyValue) {
       return(rules)
@@ -95,7 +89,6 @@ addLiteral <- function(rule, pos, neg) {
         
         accuracy <- (TP + TN) / (nrow(pos) + nrow(neg))
         if (accuracy > bestAccuracy) {
-          print(c(v, i, accuracy))
           bestAccuracy <- accuracy
           newRule <- rule
           newRule[i] <- v
@@ -114,7 +107,6 @@ addLiteral <- function(rule, pos, neg) {
 #' @return Pruned rule.
 pruneRule <- function(rule, pos, neg) {
   best <- ruleAccuracy(rule, pos, neg)
-  print(c("PRUNING best is", best))
   repeat {
     accuracies <- rep(0, length(rule))
     for (i in 1:length(rule)) {
@@ -124,14 +116,11 @@ pruneRule <- function(rule, pos, neg) {
         accuracies[i] <- ruleAccuracy(newRule, pos, neg)
       }
     }
-    print(accuracies)
     newMax <- max(accuracies)
-    #print(c(newMax, best, length(rule)))
     if (sum(!is.na(rule)) > 1 && best < newMax) {
       best <- newMax
       rule[which.max(accuracies)] <- NA
     } else {
-      print(c("now best is", best))
       return(rule)
     }
   }
