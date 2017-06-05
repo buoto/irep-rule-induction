@@ -1,6 +1,8 @@
 source('irep.R')
 library(pROC)
 
+set.seed(1337)
+
 data <- read.csv(url("https://archive.ics.uci.edu/ml/machine-learning-databases/mushroom/agaricus-lepiota.data"), header=FALSE)
 #colnames(data) <- c('class', 'cap-shape', 'cap-surface', 'cap-color', 'bruises?', 'odor',
 #                    'gill-attachment', 'gill-spacing', 'gill-size', 'gill-color', 'stalk-shape',

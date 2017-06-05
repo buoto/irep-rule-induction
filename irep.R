@@ -1,113 +1,6 @@
 library(caTools)
 library(dplyr)
 library(lazyeval)
-library(pROC)
-
-set.seed(1337)
-
-#' Filter dataframe with provided rule.
-#' 
-#' @param rule Rule represented as vector of attributes.
-#' @param df Dataframe to filter.
-#' @return Filtered dataframe.
-cover <- function(rule, df) {
-  filterConds <- c()
-  for (i in 1:length(rule)) {
-    if(!is.na(rule[i])) {
-      filterConds <- c(filterConds, interp(~df[[i]] == x, i = i, x = rule[i]))
-    }
-  }
-  filter_(df, .dots=filterConds)
-}
-
-#' Grow rule with one literal.
-#' 
-#' @param rule Rule represented as vector of attributes.
-#' @param pos Dataframe containing positive examples.
-#' @param neg Dataframe containing negative examples.
-#' @return Rule with new literal added.
-addLiteral <- function(rule, pos, neg) {
-  bestAccuracy <- -1
-  newRule <- rule
-  for (i in 1:length(rule)) {
-    if (is.na(rule[i])) {
-      values <- list(pos[[i]], neg[[i]]) %>% unlist %>% unique
-      values <- values[!is.na(values)]
-      
-      for (v in values) {
-        TP <- sum(pos[[i]] == v, na.rm = TRUE)
-        FN <- sum(neg[[i]] == v, na.rm = TRUE)
-        TN <- nrow(neg) - FN
-        
-        accuracy <- (TP + TN) / (nrow(pos) + nrow(neg))
-        if (accuracy > bestAccuracy) {
-          print(c(v, i, accuracy))
-          bestAccuracy <- accuracy
-          newRule <- rule
-          newRule[i] <- v
-        }
-      }
-    }
-  }
-  newRule
-}
-
-#' Prune maximizing rule accuracy.
-#' 
-#' @param rule Rule represented as vector of attributes.
-#' @param pos Dataframe containing positive examples.
-#' @param neg Dataframe containing negative examples.
-#' @return Pruned rule.
-pruneRule <- function(rule, pos, neg) {
-  best <- ruleAccuracy(rule, pos, neg)
-  print(c("PRUNING best is", best))
-  repeat {
-    accuracies <- rep(0, length(rule))
-    for (i in 1:length(rule)) {
-      if (!is.na(rule[i])) {
-        newRule <- rule
-        newRule[i] <- NA
-        accuracies[i] <- ruleAccuracy(newRule, pos, neg)
-      }
-    }
-    print(accuracies)
-    newMax <- max(accuracies)
-    #print(c(newMax, best, length(rule)))
-    if (sum(!is.na(rule)) > 1 && best < newMax) {
-      best <- newMax
-      rule[which.max(accuracies)] <- NA
-    } else {
-      print(c("now best is", best))
-      return(rule)
-    }
-  }
-}
-
-#' Get accuracy of rule on provided dataset.
-#' 
-#' @param rule Rule represented as vector of attributes.
-#' @param pos Dataframe containing positive examples.
-#' @param neg Dataframe containing negative examples.
-#' @return A number - rule accuracy.
-ruleAccuracy <- function(rule, pos, neg) {
-  TP <- rule %>% cover(pos) %>% nrow
-  FN <- rule %>% cover(neg) %>% nrow
-  TN <- nrow(neg) - FN
-  
-  (TP + TN) / (nrow(pos) + nrow(neg))
-}
-
-#' Get fail accuracy of provided dataset.
-#' 
-#' @param pos Dataframe containing positive examples.
-#' @param neg Dataframe containing negative examples.
-#' @return A number - fail accuracy.
-failAccuracy <- function(pos, neg) {
-  P <- nrow(pos)
-  N <- nrow(neg)
-  
-  N / (P + N)
-}
 
 #' Extract rules from provided dataset using IREP algorithm
 #' based on Furnkranz and Widmer paper.
@@ -177,4 +70,106 @@ matchRules <- function(rules, example) rules %>% sapply(function(rule) matchRule
 #' @return Rules prediction (TRUE/FALSE).
 matchRule <- function(rule, example) all(rule == example, na.rm = TRUE)
 
+#' Grow rule with one literal.
+#' 
+#' @param rule Rule represented as vector of attributes.
+#' @param pos Dataframe containing positive examples.
+#' @param neg Dataframe containing negative examples.
+#' @return Rule with new literal added.
+addLiteral <- function(rule, pos, neg) {
+  bestAccuracy <- -1
+  newRule <- rule
+  for (i in 1:length(rule)) {
+    if (is.na(rule[i])) {
+      values <- list(pos[[i]], neg[[i]]) %>% unlist %>% unique
+      values <- values[!is.na(values)]
+      
+      for (v in values) {
+        TP <- sum(pos[[i]] == v, na.rm = TRUE)
+        FN <- sum(neg[[i]] == v, na.rm = TRUE)
+        TN <- nrow(neg) - FN
+        
+        accuracy <- (TP + TN) / (nrow(pos) + nrow(neg))
+        if (accuracy > bestAccuracy) {
+          print(c(v, i, accuracy))
+          bestAccuracy <- accuracy
+          newRule <- rule
+          newRule[i] <- v
+        }
+      }
+    }
+  }
+  newRule
+}
 
+#' Prune maximizing rule accuracy.
+#' 
+#' @param rule Rule represented as vector of attributes.
+#' @param pos Dataframe containing positive examples.
+#' @param neg Dataframe containing negative examples.
+#' @return Pruned rule.
+pruneRule <- function(rule, pos, neg) {
+  best <- ruleAccuracy(rule, pos, neg)
+  print(c("PRUNING best is", best))
+  repeat {
+    accuracies <- rep(0, length(rule))
+    for (i in 1:length(rule)) {
+      if (!is.na(rule[i])) {
+        newRule <- rule
+        newRule[i] <- NA
+        accuracies[i] <- ruleAccuracy(newRule, pos, neg)
+      }
+    }
+    print(accuracies)
+    newMax <- max(accuracies)
+    #print(c(newMax, best, length(rule)))
+    if (sum(!is.na(rule)) > 1 && best < newMax) {
+      best <- newMax
+      rule[which.max(accuracies)] <- NA
+    } else {
+      print(c("now best is", best))
+      return(rule)
+    }
+  }
+}
+
+#' Get fail accuracy for provided dataset.
+#' 
+#' @param pos Dataframe containing positive examples.
+#' @param neg Dataframe containing negative examples.
+#' @return A number - fail accuracy.
+failAccuracy <- function(pos, neg) {
+  P <- nrow(pos)
+  N <- nrow(neg)
+  
+  N / (P + N)
+}
+
+#' Get accuracy of rule on provided dataset.
+#' 
+#' @param rule Rule represented as vector of attributes.
+#' @param pos Dataframe containing positive examples.
+#' @param neg Dataframe containing negative examples.
+#' @return A number - rule accuracy.
+ruleAccuracy <- function(rule, pos, neg) {
+  TP <- rule %>% cover(pos) %>% nrow
+  FN <- rule %>% cover(neg) %>% nrow
+  TN <- nrow(neg) - FN
+  
+  (TP + TN) / (nrow(pos) + nrow(neg))
+}
+
+#' Filter dataframe with provided rule.
+#' 
+#' @param rule Rule represented as vector of attributes.
+#' @param df Dataframe to filter.
+#' @return Filtered dataframe.
+cover <- function(rule, df) {
+  filterConds <- c()
+  for (i in 1:length(rule)) {
+    if(!is.na(rule[i])) {
+      filterConds <- c(filterConds, interp(~df[[i]] == x, i = i, x = rule[i]))
+    }
+  }
+  filter_(df, .dots=filterConds)
+}
