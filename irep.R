@@ -11,10 +11,11 @@ library(lazyeval)
 #' 
 #' @param pos Dataframe containing positive examples.
 #' @param neg Dataframe containing negative examples.
-#' @param splitRatio A number
+#' @param splitRatio A number.
+#' @param failAccuracyValue Minimal rule accuracy.
 #' @return List of rules represented as vectors of attributes.
 irep <- function(pos, neg, splitRatio, failAccuracyValue = failAccuracy(pos, neg)) {
-  rules <- c()
+  rules <- list()
   
   while (nrow(pos) > 0) {
     pos.sample <- sample.split(pos[[1]], SplitRatio = splitRatio)
@@ -35,6 +36,7 @@ irep <- function(pos, neg, splitRatio, failAccuracyValue = failAccuracy(pos, neg
     rule <- pruneRule(rule, posPrune, negPrune)
     
     if (ruleAccuracy(rule, pos, neg) <= failAccuracyValue) {
+      class(rules) <- 'irep' 
       return(rules)
     } else {
       pos <- setdiff(pos, cover(rule, pos))
@@ -59,7 +61,10 @@ predict.irep <- function(object, newdata) apply(newdata, 1, function (example) m
 #' @param rules Fitted rules from "irep" model.
 #' @param example Single example as vector of attributes.
 #' @return Rules prediction (TRUE/FALSE).
-matchRules <- function(rules, example) rules %>% sapply(function(rule) matchRule(rule, example)) %>% any
+matchRules <- function(rules, example) {
+  if (length(rules) == 0) return(TRUE)
+  rules %>% sapply(function(rule) matchRule(rule, example)) %>% any
+}
 
 #' Match example against one rule.
 #' 
