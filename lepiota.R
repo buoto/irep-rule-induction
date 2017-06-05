@@ -1,3 +1,6 @@
+# IREP algotithm implementation
+#' @author Michał Błotniak
+#' @author Magdalena Rusiecka
 source('irep.R')
 library(pROC)
 

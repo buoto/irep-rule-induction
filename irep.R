@@ -1,3 +1,7 @@
+# IREP algotithm implementation
+#' @author Michał Błotniak
+#' @author Magdalena Rusiecka
+
 library(caTools)
 library(dplyr)
 library(lazyeval)

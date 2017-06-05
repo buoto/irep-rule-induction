@@ -1,3 +1,6 @@
+# IREP algotithm implementation
+#' @author Michał Błotniak
+#' @author Magdalena Rusiecka
 source('irep.R')
 
 small.data <- data.frame(c(1, 1, 0, 1, 0, 0), c(1, 1, 1, 0, 0, 0), c(0, 1, 0, 1, 0, 0), c(0, 0, 1, 0, 0, 1))
